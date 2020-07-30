@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Experiment: paired judgments</title>
+        <script src="jspsych-6.0.1/jspsych.js"></script>
+        <script src="jspsych-6.0.1/plugins/jspsych-html-keyboard-response.js"></script>
+        <script src="jspsych-6.0.1/plugins/jspsych-audio-keyboard-response.js"></script>
+        <script src="jspsych-6.0.1/plugins/jspsych-audio-button-response.js"></script> 
+        <script src="jspsych-6.0.1/plugins/jspsych-audio-slider-response.js"></script> 
+        <script src="jspsych-6.0.1/plugins/jspsych-survey-text.js"></script> 
+        <script src="jspsych-6.0.1/plugins/jspsych-instructions.js"></script> 
+        <script src="jspsych-6.0.1/plugins/jspsych-external-html.js"></script> 
+        <script src="jspsych-6.0.1/plugins/jspsych-survey-multi-choice.js"></script> 
+        <script src="jspsych-6.0.1/plugins/jspsych-survey-text.js"></script> 
+        <script src="jspsych-6.0.1/plugins/jspsych-video.js"></script> 
+        <script src="jspsych-6.0.1/plugins/jspsych-same-different-html.js"></script> 
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+        <link href="jspsych-6.0.1/css/jspsych.css" rel="stylesheet" type="text/css"></link>
+    </head>
+    <body></body>
+    <script>
+
+// generate a random subject ID. Should this exclude prior subject ids?
+var subject_id = Math.floor(Math.random()*100000);
+var survey_code = Math.floor(Math.random()*1000000);
+
+// pick a random condition for the subject at the start of the experiment
+var group_assignment = jsPsych.randomization.sampleWithReplacement(['group1', 'group2', 'group3', 'group4'],1)[0];
+
+// also pick a random judgment condition
+var assigned_judgment = jsPsych.randomization.sampleWithReplacement(['Which version was louder?', 
+                                                                     'Which version had more rising intonation?',
+                                                                     'Which version had a higher overall pitch?', 
+                                                                     'Which version was longer?'],1)[0];
+
+var assigned_judgment = jsPsych.randomization.sampleWithReplacement(['loudness', 
+                                                                     'intonation',
+                                                                     'pitch', 
+                                                                     'duration'],1)[0];    
+
+
+var instructions;
+var xer;
+
+if (assigned_judgment == "loudness") {
+  var judgment_question = "Which version was louder?"
+  xer = 'is louder'
+  instructions = "Your task is to determine which of those sentences was <b>louder</b>."
+}
+else if (assigned_judgment == "intonation") {
+  var judgment_question = "Which version had more rising intonation?"
+  xer = 'has more rising intonation'
+  instructions = "Your task is to determine which of those sentences has more of a <b>rising intonation</b>. Rising intonation means that the <i>pitch</i> of the speaker increases throughout the sentence."
+}
+else if (assigned_judgment == "pitch") {
+  var judgment_question = "Which version had a higher overall pitch?"
+  xer = 'has a higher pitch'
+  instructions = "Your task is to determine which of those sentences has a <b>higher pitch</b> overall (not in terms of the <i>maximum</i> pitch of the sentence, but the <i>average</i> pitch)."
+}
+else if (assigned_judgment == "duration") {
+  var judgment_question = "Which version was longer?"
+  xer = 'is longer'
+  instructions = "Your task is to determine which of those sentences was <b>longer</b>. Sometimes people <i>stretch out</i> certain words, or make other words <i>shorter</shorter>."
+}
+
+console.log(assigned_judgment)
+
+jsPsych.data.addProperties({
+    subject: subject_id,
+    survey_code: survey_code,
+    group: group_assignment,
+    judgment: assigned_judgment,
+    assigned_question: judgment_question
+})
+
+var check_consent = function(elem) {
+  if ($('#consent_checkbox').is(':checked')) {
+    return true;
+  }
+  else {
+    alert("If you wish to participate, you must check the box next to the statement 'I agree to participate in this study.'");
+    return false;
+  }
+  return false;
+};
+
+ function saveData(filename, filedata){
+   $.ajax({
+      type:'post',
+      cache: false,
+      url: 'save_data.php', // this is the path to the above PHP script
+      data: {filename: filename, filedata: filedata}
+   });
+}
+
+
+////// Intro 
+
+var intro1 = {
+    type: 'instructions',
+    pages: [
+        'Note: This experiment involves the use of sound. If you do not have working headphones or speakers, please do not continue the experiment.<p>Before you continue, make sure that your headphones or speakers are turned on. You will be required to correctly answer a question involving the use of audio.'
+    ],
+    show_clickable_nav: true
+}
+
+var intro_reminder1= {
+    type: 'instructions',
+    pages: [
+        'On the next page, you will hear someone speaking. This is a chance to calibrate your audio to the sound. Turn your speakers up until you can clearly hear the words.'
+    ],
+    show_clickable_nav: true
+}
+
+
+var intro_reminder2= {
+    type: 'instructions',
+    pages: [
+        'On the next page, you will have to correctly answer a question. To hear the question, make sure your speakers are turned up adequately.'
+    ],
+    show_clickable_nav: true
+}
+
+  var consent = {
+    type: 'external-html',
+    url: 'consent.html',
+    cont_btn:'start',
+    check_fn: check_consent 
+  }
+
+
+  var intro2 = {
+    type: 'instructions',
+    pages: [
+        'Congratulations, you passed the audio test! Now you can begin the experiment. Click "Next" to continue.', 
+        'On each page, you will hear two sentences, produced by the same speaker and containing the same words.' + instructions + ' Indicate which sentence you think ' + xer + ' overall by clicking either <b>First</b> or <b>Second</b>.',
+          'One final note: Remember that on each page, you will listen to <b>two</b> versions of the same sentence. They will play automatically, and will be separated by a short pause. Listen carefully to <b>both</b> versions, then make your decision. You will <b>not</b> be able to hear them again.<p>Good luck!'
+    ],
+    show_clickable_nav: true
+}
+
+var audio_calibration = {
+    type: 'video',
+    sources: ['prosody_paired_samples/audio_calibration.mp4'],
+    data: {'type': 'calibration'},
+    controls: true
+}
+
+
+var audio_test=  {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/ears_audio_check.wav',
+    data: {'type': 'test'},
+    choices: ['0','1', '2', '3', '4'],
+    prompt: "<p>Please answer the question from the audio.</p>",
+    response_ends_trial: true
+};
+
+
+var advance_check = {
+  chunk_type: 'if',
+  timeline: [intro2],
+  conditional_function: function() {
+    var previous_trial = jsPsych.data.get().last(1).values()[0]
+    if (previous_trial.button_pressed == 2) {
+      alert("Correct!")
+      jsPsych.data.addProperties({passed_test:'yes'})
+      return true 
+    } else {
+      alert("Incorrect! Unfortunately, you cannot continue the experiment.")
+      jsPsych.data.addProperties({passed_test:'no'})
+      jsPsych.endExperiment("Experiment ended!")
+      return true
+      }
+      return false
+    }
+}
+
+/// Experiment proper
+
+/////////////////////////////////// Danny Block //////////////////////////////////
+
+var t1_request_literal_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/IR_literal_car.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 1, 'topic': 'car', 'speaker': 'Danny', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t2_request_literal_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/IR_literal_back.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 2, 'topic': 'back', 'speaker': 'Danny', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t3_request_literal_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/IR_literal_box.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 3, 'topic': 'box', 'speaker': 'Danny', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t4_request_literal_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/IR_literal_door.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 4, 'topic': 'door', 'speaker': 'Danny', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t5_request_literal_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/IR_literal_laptop.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 5, 'topic': 'laptop', 'speaker': 'Danny', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t6_request_literal_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/IR_literal_office.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 6, 'topic': 'office', 'speaker': 'Danny', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t7_request_literal_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/IR_literal_phone.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 7, 'topic': 'phone', 'speaker': 'Danny', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t8_request_literal_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/IR_literal_piano.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 8, 'topic': 'piano', 'speaker': 'Danny', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t9_request_literal_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/IR_literal_soup.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 9, 'topic': 'soup', 'speaker': 'Danny', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t10_request_literal_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/IR_literal_Spanish.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 10, 'topic': 'spanish', 'speaker': 'Danny', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t11_request_literal_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/IR_literal_window.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 11, 'topic': 'window', 'speaker': 'Danny', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t12_request_literal_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/IR_literal_temp.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 12, 'topic': 'temperature', 'speaker': 'Danny', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t1_literal_request_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/literal_IR_car.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 1, 'topic': 'car', 'speaker': 'Danny', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t2_literal_request_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/literal_IR_back.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 2, 'topic': 'back', 'speaker': 'Danny', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t3_literal_request_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/literal_IR_box.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 3, 'topic': 'box', 'speaker': 'Danny', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t4_literal_request_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/literal_IR_door.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 4, 'topic': 'door', 'speaker': 'Danny', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t5_literal_request_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/literal_IR_laptop.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 5, 'topic': 'laptop', 'speaker': 'Danny', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t6_literal_request_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/literal_IR_office.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 6, 'topic': 'office', 'speaker': 'Danny', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t7_literal_request_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/literal_IR_phone.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 7, 'topic': 'phone', 'speaker': 'Danny', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t8_literal_request_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/literal_IR_piano.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 8, 'topic': 'piano', 'speaker': 'Danny', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t9_literal_request_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/literal_IR_soup.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 9, 'topic': 'soup', 'speaker': 'Danny', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t10_literal_request_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/literal_IR_Spanish.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 10, 'topic': 'spanish', 'speaker': 'Danny', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t11_literal_request_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/literal_IR_window.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 11, 'topic': 'window', 'speaker': 'Danny', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t12_literal_request_d = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/DannyK/literal_IR_temp.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 12, 'topic': 'temperature', 'speaker': 'Danny', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////// Karen Block //////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+var t1_request_literal_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/IR_literal_car.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 1, 'topic': 'car', 'speaker': 'Karen', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t2_request_literal_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/IR_literal_back.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 2, 'topic': 'back', 'speaker': 'Karen', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t3_request_literal_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/IR_literal_box.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 3, 'topic': 'box', 'speaker': 'Karen', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t4_request_literal_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/IR_literal_door.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 4, 'topic': 'door', 'speaker': 'Karen', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t5_request_literal_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/IR_literal_laptop.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 5, 'topic': 'laptop', 'speaker': 'Karen', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t6_request_literal_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/IR_literal_office.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 6, 'topic': 'office', 'speaker': 'Karen', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t7_request_literal_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/IR_literal_phone.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 7, 'topic': 'phone', 'speaker': 'Karen', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t8_request_literal_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/IR_literal_piano.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 8, 'topic': 'piano', 'speaker': 'Karen', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t9_request_literal_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/IR_literal_soup.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 9, 'topic': 'soup', 'speaker': 'Karen', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t10_request_literal_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/IR_literal_Spanish.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 10, 'topic': 'spanish', 'speaker': 'Karen', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t11_request_literal_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/IR_literal_window.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 11, 'topic': 'window', 'speaker': 'Karen', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t12_request_literal_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/IR_literal_temp.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 12, 'topic': 'temperature', 'speaker': 'Karen', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t1_literal_request_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/literal_IR_car.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 1, 'topic': 'car', 'speaker': 'Karen', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t2_literal_request_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/literal_IR_back.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 2, 'topic': 'back', 'speaker': 'Karen', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t3_literal_request_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/literal_IR_box.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 3, 'topic': 'box', 'speaker': 'Karen', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t4_literal_request_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/literal_IR_door.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 4, 'topic': 'door', 'speaker': 'Karen', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t5_literal_request_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/literal_IR_laptop.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 5, 'topic': 'laptop', 'speaker': 'Karen', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t6_literal_request_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/literal_IR_office.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 6, 'topic': 'office', 'speaker': 'Karen', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t7_literal_request_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/literal_IR_phone.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 7, 'topic': 'phone', 'speaker': 'Karen', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t8_literal_request_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/literal_IR_piano.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 8, 'topic': 'piano', 'speaker': 'Karen', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t9_literal_request_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/literal_IR_soup.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 9, 'topic': 'soup', 'speaker': 'Karen', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t10_literal_request_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/literal_IR_Spanish.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 10, 'topic': 'spanish', 'speaker': 'Karen', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t11_literal_request_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/literal_IR_window.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 11, 'topic': 'window', 'speaker': 'Karen', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t12_literal_request_kl = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KarenL/literal_IR_temp.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 12, 'topic': 'temperature', 'speaker': 'Karen', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////// Katie Block //////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+var t1_request_literal_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/IR_Literal_car.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 1, 'topic': 'car', 'speaker': 'Katie', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t2_request_literal_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/IR_Literal_back.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 2, 'topic': 'back', 'speaker': 'Katie', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t3_request_literal_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/IR_Literal_box.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 3, 'topic': 'box', 'speaker': 'Katie', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t4_request_literal_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/IR_Literal_door.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 4, 'topic': 'door', 'speaker': 'Katie', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t5_request_literal_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/IR_Literal_laptop.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 5, 'topic': 'laptop', 'speaker': 'Katie', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t6_request_literal_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/IR_Literal_office.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 6, 'topic': 'office', 'speaker': 'Katie', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t7_request_literal_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/IR_Literal_phone.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 7, 'topic': 'phone', 'speaker': 'Katie', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t8_request_literal_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/IR_Literal_piano.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 8, 'topic': 'piano', 'speaker': 'Katie', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t9_request_literal_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/IR_Literal_soup.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 9, 'topic': 'soup', 'speaker': 'Katie', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t10_request_literal_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/IR_Literal_Spanish.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 10, 'topic': 'spanish', 'speaker': 'Katie', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t11_request_literal_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/IR_Literal_window.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 11, 'topic': 'window', 'speaker': 'Katie', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t12_request_literal_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/IR_Literal_temp.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 12, 'topic': 'temperature', 'speaker': 'Katie', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t1_literal_request_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/Literal_IR_car.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 1, 'topic': 'car', 'speaker': 'Katie', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t2_literal_request_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/Literal_IR_back.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 2, 'topic': 'back', 'speaker': 'Katie', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t3_literal_request_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/Literal_IR_box.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 3, 'topic': 'box', 'speaker': 'Katie', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t4_literal_request_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/Literal_IR_door.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 4, 'topic': 'door', 'speaker': 'Katie', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t5_literal_request_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/Literal_IR_laptop.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 5, 'topic': 'laptop', 'speaker': 'Katie', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t6_literal_request_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/Literal_IR_office.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 6, 'topic': 'office', 'speaker': 'Katie', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t7_literal_request_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/Literal_IR_phone.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 7, 'topic': 'phone', 'speaker': 'Katie', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t8_literal_request_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/Literal_IR_piano.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 8, 'topic': 'piano', 'speaker': 'Katie', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t9_literal_request_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/Literal_IR_soup.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 9, 'topic': 'soup', 'speaker': 'Katie', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t10_literal_request_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/Literal_IR_Spanish.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 10, 'topic': 'spanish', 'speaker': 'Katie', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t11_literal_request_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/Literal_IR_window.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 11, 'topic': 'window', 'speaker': 'Katie', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t12_literal_request_k = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/KatieS/Literal_IR_temp.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 12, 'topic': 'temperature', 'speaker': 'Katie', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////// Nimish Block //////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+var t1_request_literal_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/IR_Literal_car.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 1, 'topic': 'car', 'speaker': 'Nimish', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t2_request_literal_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/IR_Literal_back.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 2, 'topic': 'back', 'speaker': 'Nimish', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t3_request_literal_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/IR_Literal_box.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 3, 'topic': 'box', 'speaker': 'Nimish', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t4_request_literal_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/IR_Literal_door.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 4, 'topic': 'door', 'speaker': 'Nimish', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t5_request_literal_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/IR_Literal_laptop.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 5, 'topic': 'laptop', 'speaker': 'Nimish', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t6_request_literal_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/IR_Literal_office.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 6, 'topic': 'office', 'speaker': 'Nimish', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t7_request_literal_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/IR_Literal_phone.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 7, 'topic': 'phone', 'speaker': 'Nimish', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t8_request_literal_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/IR_Literal_piano.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 8, 'topic': 'piano', 'speaker': 'Nimish', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t9_request_literal_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/IR_Literal_soup.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 9, 'topic': 'soup', 'speaker': 'Nimish', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t10_request_literal_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/IR_Literal_Spanish.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 10, 'topic': 'spanish', 'speaker': 'Nimish', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t11_request_literal_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/IR_Literal_window.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 11, 'topic': 'window', 'speaker': 'Nimish', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t12_request_literal_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/IR_Literal_temp.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 12, 'topic': 'temperature', 'speaker': 'Nimish', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t1_literal_request_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/Literal_IR_car.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 1, 'topic': 'car', 'speaker': 'Nimish', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t2_literal_request_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/Literal_IR_back.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 2, 'topic': 'back', 'speaker': 'Nimish', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t3_literal_request_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/Literal_IR_box.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 3, 'topic': 'box', 'speaker': 'Nimish', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t4_literal_request_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/Literal_IR_door.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 4, 'topic': 'door', 'speaker': 'Nimish', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t5_literal_request_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/Literal_IR_laptop.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 5, 'topic': 'laptop', 'speaker': 'Nimish', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t6_literal_request_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/Literal_IR_office.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 6, 'topic': 'office', 'speaker': 'Nimish', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t7_literal_request_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/Literal_IR_phone.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 7, 'topic': 'phone', 'speaker': 'Nimish', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t8_literal_request_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/Literal_IR_piano.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 8, 'topic': 'piano', 'speaker': 'Nimish', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t9_literal_request_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/Literal_IR_soup.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 9, 'topic': 'soup', 'speaker': 'Nimish', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t10_literal_request_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/Literal_IR_Spanish.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 10, 'topic': 'spanish', 'speaker': 'Nimish', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t11_literal_request_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/Literal_IR_window.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 11, 'topic': 'window', 'speaker': 'Nimish', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t12_literal_request_n = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/NimishP/Literal_IR_temp.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 12, 'topic': 'temperature', 'speaker': 'Nimish', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////// Maiyi Block //////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+var t1_request_literal_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/IR_literal_car.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 1, 'topic': 'car', 'speaker': 'Maiyi', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t2_request_literal_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/IR_literal_back.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 2, 'topic': 'back', 'speaker': 'Maiyi', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t3_request_literal_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/IR_literal_box.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 3, 'topic': 'box', 'speaker': 'Maiyi', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t4_request_literal_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/IR_literal_door.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 4, 'topic': 'door', 'speaker': 'Maiyi', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t5_request_literal_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/IR_literal_laptop.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 5, 'topic': 'laptop', 'speaker': 'Maiyi', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t6_request_literal_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/IR_literal_office.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 6, 'topic': 'office', 'speaker': 'Maiyi', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t7_request_literal_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/IR_literal_phone.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 7, 'topic': 'phone', 'speaker': 'Maiyi', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t8_request_literal_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/IR_literal_piano.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 8, 'topic': 'piano', 'speaker': 'Maiyi', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t9_request_literal_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/IR_literal_soup.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 9, 'topic': 'soup', 'speaker': 'Maiyi', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t10_request_literal_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/IR_literal_Spanish.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 10, 'topic': 'spanish', 'speaker': 'Maiyi', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t11_request_literal_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/IR_literal_window.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 11, 'topic': 'window', 'speaker': 'Maiyi', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t12_request_literal_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/IR_literal_temp.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'first', stimNum: 12, 'topic': 'temperature', 'speaker': 'Maiyi', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t1_literal_request_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/literal_IR_car.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 1, 'topic': 'car', 'speaker': 'Maiyi', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t2_literal_request_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/literal_IR_back.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 2, 'topic': 'back', 'speaker': 'Maiyi', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t3_literal_request_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/literal_IR_box.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 3, 'topic': 'box', 'speaker': 'Maiyi', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t4_literal_request_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/literal_IR_door.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 4, 'topic': 'door', 'speaker': 'Maiyi', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t5_literal_request_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/literal_IR_laptop.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 5, 'topic': 'laptop', 'speaker': 'Maiyi', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t6_literal_request_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/literal_IR_office.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 6, 'topic': 'office', 'speaker': 'Maiyi', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t7_literal_request_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/literal_IR_phone.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 7, 'topic': 'phone', 'speaker': 'Maiyi', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t8_literal_request_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/literal_IR_piano.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 8, 'topic': 'piano', 'speaker': 'Maiyi', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t9_literal_request_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/literal_IR_soup.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 9, 'topic': 'soup', 'speaker': 'Maiyi', 'form': 'indirect'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t10_literal_request_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/literal_IR_Spanish.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 10, 'topic': 'spanish', 'speaker': 'Maiyi', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t11_literal_request_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/literal_IR_window.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 11, 'topic': 'window', 'speaker': 'Maiyi', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+var t12_literal_request_m = {
+    type: 'audio-button-response',
+    stimulus: 'prosody_paired_samples/MaiyiY/literal_IR_temp.wav',
+    choices: ['First', 'Second'],
+    data: {'answer': 'second', stimNum: 12, 'topic': 'temperature', 'speaker': 'Maiyi', 'form': 'modal'},
+    prompt: judgment_question,
+  response_ends_trial: true
+};
+
+
+
+//////// Setting up speaker blocks //////////
+//// Always select 6 IR/Literal and 6 Literal/IR from each speaker, but randomize which items are in which order.
+
+var katie_block = [[t1_request_literal_k, t1_literal_request_k], 
+                   [t3_request_literal_k, t3_literal_request_k],
+                   [t5_request_literal_k, t5_literal_request_k],
+                   [t7_request_literal_k, t7_literal_request_k],
+                   [t9_request_literal_k, t9_literal_request_k],
+                   [t11_request_literal_k, t11_literal_request_k],
+                   [t2_request_literal_k, t2_literal_request_k],
+                   [t4_request_literal_k, t4_literal_request_k],
+                   [t6_request_literal_k, t6_literal_request_k],
+                   [t8_request_literal_k, t8_literal_request_k],
+                   [t10_request_literal_k, t10_literal_request_k],
+                   [t12_request_literal_k, t12_literal_request_k]]
+
+// Randomize indices that are either 0 or 1 to index into katie_block
+var katie_indices = jsPsych.randomization.shuffle([0, 0, 0, 0, 0, 0,
+                                                   1, 1, 1, 1, 1, 1])
+
+var kb = []
+for (var i = 0; i < katie_indices.length; i++) { 
+  index = katie_indices[i]
+  item = katie_block[i]
+  kb.push(item[index])
+}                                                  
+
+var katie_block_final = {
+  timeline: jsPsych.randomization.shuffle(kb)
+}
+
+//// Karen block
+var karen_block = [[t1_request_literal_kl, t1_literal_request_kl], 
+                   [t3_request_literal_kl, t3_literal_request_kl],
+                   [t5_request_literal_kl, t5_literal_request_kl],
+                   [t7_request_literal_kl, t7_literal_request_kl],
+                   [t9_request_literal_kl, t9_literal_request_kl],
+                   [t11_request_literal_kl, t11_literal_request_kl],
+                   [t2_request_literal_kl, t2_literal_request_kl],
+                   [t4_request_literal_kl, t4_literal_request_kl],
+                   [t6_request_literal_kl, t6_literal_request_kl],
+                   [t8_request_literal_kl, t8_literal_request_kl],
+                   [t10_request_literal_kl, t10_literal_request_kl],
+                   [t12_request_literal_kl, t12_literal_request_kl]]
+
+// Randomize indices that are either 0 or 1 to index into katie_block
+var karen_indices = jsPsych.randomization.shuffle([0, 0, 0, 0, 0, 0,
+                                                   1, 1, 1, 1, 1, 1])
+
+var sb = []
+for (var i = 0; i < karen_indices.length; i++) { 
+  index = karen_indices[i]
+  item = karen_block[i]
+  sb.push(item[index])
+}                                                  
+
+var karen_block_final = {
+  timeline: jsPsych.randomization.shuffle(sb)
+}
+
+///////// Maiyi block
+var maiyi_block = [[t1_request_literal_m, t1_literal_request_m], 
+                   [t3_request_literal_m, t3_literal_request_m],
+                   [t5_request_literal_m, t5_literal_request_m],
+                   [t7_request_literal_m, t7_literal_request_m],
+                   [t9_request_literal_m, t9_literal_request_m],
+                   [t11_request_literal_m, t11_literal_request_m],
+                   [t2_request_literal_m, t2_literal_request_m],
+                   [t4_request_literal_m, t4_literal_request_m],
+                   [t6_request_literal_m, t6_literal_request_m],
+                   [t8_request_literal_m, t8_literal_request_m],
+                   [t10_request_literal_m, t10_literal_request_m],
+                   [t12_request_literal_m, t12_literal_request_m]]
+
+// Randomize indices that are either 0 or 1 to index into katie_block
+var maiyi_indices = jsPsych.randomization.shuffle([0, 0, 0, 0, 0, 0,
+                                                   1, 1, 1, 1, 1, 1])
+
+var sb = []
+for (var i = 0; i < maiyi_indices.length; i++) { 
+  index = maiyi_indices[i]
+  item = maiyi_block[i]
+  sb.push(item[index])
+}                                                  
+
+var maiyi_block_final = {
+  timeline: jsPsych.randomization.shuffle(sb)
+}
+
+///////// Danny block
+var danny_block = [[t1_request_literal_d, t1_literal_request_d], 
+                   [t3_request_literal_d, t3_literal_request_d],
+                   [t5_request_literal_d, t5_literal_request_d],
+                   [t7_request_literal_d, t7_literal_request_d],
+                   [t9_request_literal_d, t9_literal_request_d],
+                   [t11_request_literal_d, t11_literal_request_d],
+                   [t2_request_literal_d, t2_literal_request_d],
+                   [t4_request_literal_d, t4_literal_request_d],
+                   [t6_request_literal_d, t6_literal_request_d],
+                   [t8_request_literal_d, t8_literal_request_d],
+                   [t10_request_literal_d, t10_literal_request_d],
+                   [t12_request_literal_d, t12_literal_request_d]]
+
+// Randomize indices that are either 0 or 1 to index into block
+var danny_indices = jsPsych.randomization.shuffle([0, 0, 0, 0, 0, 0,
+                                                   1, 1, 1, 1, 1, 1])
+
+var sb = []
+for (var i = 0; i < danny_indices.length; i++) { 
+  index = danny_indices[i]
+  item = danny_block[i]
+  sb.push(item[index])
+}                                                  
+
+var danny_block_final = {
+  timeline: jsPsych.randomization.shuffle(sb)
+}
+
+///////// Nimish block
+var nimish_block = [[t1_request_literal_n, t1_literal_request_n], 
+                   [t3_request_literal_n, t3_literal_request_n],
+                   [t5_request_literal_n, t5_literal_request_n],
+                   [t7_request_literal_n, t7_literal_request_n],
+                   [t9_request_literal_n, t9_literal_request_n],
+                   [t11_request_literal_n, t11_literal_request_n],
+                   [t2_request_literal_n, t2_literal_request_n],
+                   [t4_request_literal_n, t4_literal_request_n],
+                   [t6_request_literal_n, t6_literal_request_n],
+                   [t8_request_literal_n, t8_literal_request_n],
+                   [t10_request_literal_n, t10_literal_request_n],
+                   [t12_request_literal_n, t12_literal_request_n]]
+
+// Randomize indices that are either 0 or 1 to index into katie_block
+var nimish_indices = jsPsych.randomization.shuffle([0, 0, 0, 0, 0, 0,
+                                                   1, 1, 1, 1, 1, 1])
+
+var sb = []
+for (var i = 0; i < nimish_indices.length; i++) { 
+  index = nimish_indices[i]
+  item = nimish_block[i]
+  sb.push(item[index])
+}                                                  
+
+var nimish_block_final = {
+  timeline: jsPsych.randomization.shuffle(sb)
+}
+
+
+
+////////////////////// Set up timeline
+
+var timeline = []
+
+timeline = jsPsych.randomization.shuffle([katie_block_final, karen_block_final, maiyi_block_final, nimish_block_final, danny_block_final])
+
+
+
+
+/////////////////// Final stuff
+/* define final message block */
+
+
+var debrief = {
+    type: 'survey-text',
+    questions: [{'prompt':'Thanks! What did you think this experiment was about?'}],
+    data: {type: "debrief"}
+  }
+
+
+var demographics1 = {
+  type: 'survey-multi-choice',
+  questions: [{required: true, prompt: 'Please select the gender with which you identify.', options:['Male', 'Female', 'Non-binary', 'Prefer not to say']},
+              {required: true, prompt: 'Are you a native speaker of English?', options:['Yes', 'No']},
+              {required:true, prompt: 'On a scale of 1 (very bad) to 7 (very good), rate your musical ability.', options:['1', '2', '3', '4', '5', '6','7'], horizontal: true},
+              {required: true, prompt: 'Did you complete this experiment on a mobile device?', options:['Yes', 'No']}],
+  data: {type: "demographic1"}
+}
+
+  var age = {
+    type: 'survey-text',
+    questions: [{'prompt':'How old are you?'}],
+    data: {type: "age"}
+  }
+
+var final_block = {
+  type: 'survey-text',
+  questions: [{'prompt': 'Thank you for participating in the experiment! <p>Your completion code is ' + survey_code + '. <p>To receive credit for participating, enter the code below, as well as on Amazon Turk, to be approved for completing the HIT.'}]
+};
+
+
+
+ //timeline = [intro1, audio_test, advance_check]
+
+ timeline.unshift(intro1, consent, intro_reminder1, audio_calibration, intro_reminder2, audio_test, advance_check)
+ timeline.push(debrief, demographics1, age, final_block)
+
+ var filename = 'prosody_paired_sound_norming_' + subject_id + '.csv'
+
+
+ timline = [katie_block_final]
+
+
+
+
+ // timeline = [t1_request_literal_n]
+
+/* start the experiment */
+    jsPsych.init({
+    timeline: timeline, 
+    on_finish: function(data){ 
+        console.log(jsPsych.data.get().csv());
+        saveData(filename, jsPsych.data.get().csv());
+    }
+  });
+    </script>
+</html>
